@@ -43,7 +43,7 @@ public static class SqlQueryBuilderPostgreSql
 
         var q = $"COPY {tableName} " +
                 $"({commaSeparatedColumns}) " +
-                $"FROM STDIN (FORMAT BINARY)";
+                "FROM STDIN (FORMAT BINARY)";
 
         return q + ";";
     }
@@ -124,8 +124,8 @@ public static class SqlQueryBuilderPostgreSql
         {
             var textSelect = "SELECT ";
             var textFrom = " FROM";
-            int startIndex = q.IndexOf(textSelect);
-            var qSegment = q[startIndex..q.IndexOf(textFrom)];
+            int startIndex = q.IndexOf(textSelect, StringComparison.Ordinal);
+            var qSegment = q[startIndex..q.IndexOf(textFrom, StringComparison.Ordinal)];
             var qSegmentUpdated = qSegment;
             foreach (var mapping in sourceDestinationMappings)
             {
@@ -206,7 +206,7 @@ public static class SqlQueryBuilderPostgreSql
     {
         var primaryKeysColumns = tableInfo.PrimaryKeysPropertyColumnNameDict.Values.ToList();
 
-        var q = $"SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc ";
+        var q = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc ";
         foreach (var (pkColumn, index) in primaryKeysColumns.Select((value, i) => (value, i)))
         {
             q = q +
@@ -215,7 +215,7 @@ public static class SqlQueryBuilderPostgreSql
         }
 
         q = q +
-            $"WHERE (tc.CONSTRAINT_TYPE = 'UNIQUE' OR tc.CONSTRAINT_TYPE = 'PRIMARY KEY') " +
+            "WHERE (tc.CONSTRAINT_TYPE = 'UNIQUE' OR tc.CONSTRAINT_TYPE = 'PRIMARY KEY') " +
             $"AND tc.TABLE_NAME = '{tableInfo.TableName}' ";
 
         return q;
@@ -312,7 +312,7 @@ public static class SqlQueryBuilderPostgreSql
             //WOULD ALSO WORK
             // UPDATE "Item" SET "Description" = 'Update N', "Price" = 1.5 FROM "Item" WHERE "ItemId" <= 1
 
-            string tableAS = sql.Substring(sql.IndexOf("FROM") + 4, sql.IndexOf($"AS {firstLetterOfTable}") - sql.IndexOf("FROM"));
+            string tableAS = sql.Substring(sql.IndexOf("FROM", StringComparison.Ordinal) + 4, sql.IndexOf($"AS {firstLetterOfTable}", StringComparison.Ordinal) - sql.IndexOf("FROM", StringComparison.Ordinal));
             
             if (!sql.Contains("JOIN"))
             {
@@ -320,11 +320,11 @@ public static class SqlQueryBuilderPostgreSql
             }
             else
             {
-                int positionFROM = sql.IndexOf("FROM");
-                int positionEndJOIN = sql.IndexOf("JOIN ") + "JOIN ".Length;
-                int positionON = sql.IndexOf(" ON");
+                int positionFROM = sql.IndexOf("FROM", StringComparison.Ordinal);
+                int positionEndJOIN = sql.IndexOf("JOIN ", StringComparison.Ordinal) + "JOIN ".Length;
+                int positionON = sql.IndexOf(" ON", StringComparison.Ordinal);
                 int positionEndON = positionON + " ON".Length;
-                int positionWHERE = sql.IndexOf("WHERE");
+                int positionWHERE = sql.IndexOf("WHERE", StringComparison.Ordinal);
                 string oldSqlSegment = sql[positionFROM..positionWHERE];
                 string newSqlSegment = "FROM " + sql[positionEndJOIN..positionON];
                 string equalsPkFk = sql[positionEndON..positionWHERE];

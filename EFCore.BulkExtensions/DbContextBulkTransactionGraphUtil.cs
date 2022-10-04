@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -146,11 +145,12 @@ internal static class DbContextBulkTransactionGraphUtil
 
     private static IEnumerable<object> GetUniqueEntities(DbContext context, IEnumerable<object> entities)
     {
-        var entityType = context.Model.FindEntityType(entities.First().GetType()) ?? throw new ArgumentException($"Unable to determine EntityType from given type {entities.First().GetType().Name}");
+        var entitiesArray = entities.ToArray();
+        var entityType = context.Model.FindEntityType(entitiesArray.First().GetType()) ?? throw new ArgumentException($"Unable to determine EntityType from given type {entitiesArray.First().GetType().Name}");
         var pk = entityType.FindPrimaryKey();
         var processedPks = new HashSet<PrimaryKeyList>();
 
-        foreach (var entity in entities)
+        foreach (var entity in entitiesArray)
         {
             var entry = context.Entry(entity);
 

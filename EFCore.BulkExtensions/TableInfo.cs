@@ -341,11 +341,9 @@ public class TableInfo
         // timestamp/row version properties are only set by the Db, the property has a [Timestamp] Attribute or is configured in FluentAPI with .IsRowVersion()
         // They can be identified by the columne type "timestamp" or .IsConcurrencyToken in combination with .ValueGenerated == ValueGenerated.OnAddOrUpdate
         string timestampDbTypeName = nameof(TimestampAttribute).Replace("Attribute", "").ToLower(); // = "timestamp";
-        IEnumerable<IProperty> timeStampProperties;
-        if (BulkConfig.IgnoreRowVersion)
-            timeStampProperties = new List<IProperty>();
-        else
-            timeStampProperties = allProperties.Where(a => a.IsConcurrencyToken && a.ValueGenerated == ValueGenerated.OnAddOrUpdate); // || a.GetColumnType() == timestampDbTypeName // removed as unnecessary and might not be correct
+        var timeStampProperties = BulkConfig.IgnoreRowVersion 
+            ? new List<IProperty>() 
+            : allProperties.Where(a => a.IsConcurrencyToken && a.ValueGenerated == ValueGenerated.OnAddOrUpdate); // || a.GetColumnType() == timestampDbTypeName // removed as unnecessary and might not be correct
 
         TimeStampColumnName = timeStampProperties.FirstOrDefault()?.GetColumnName(ObjectIdentifier); // can be only One
         TimeStampPropertyName = timeStampProperties.FirstOrDefault()?.Name; // can be only One
@@ -366,7 +364,7 @@ public class TableInfo
                               ? Activator.CreateInstance(propertyType)
                               : null; // when type does not have parameterless constructor, like String for example, then default value is 'null'
 
-            bool listHasAllDefaultValues = !entities.Any(a => a?.GetType().GetProperty(propertyWithDefaultValue.Name)?.GetValue(a, null)?.ToString() != instance?.ToString());
+            bool listHasAllDefaultValues = entities.All(a => a?.GetType().GetProperty(propertyWithDefaultValue.Name)?.GetValue(a, null)?.ToString() == instance?.ToString());
             // it is not feasible to have in same list simultaneously both entities groups With and Without default values, they are omitted OnInsert only if all have default values or if it is PK (like Guid DbGenerated)
             if (listHasAllDefaultValues || (PrimaryKeysPropertyColumnNameDict.ContainsKey(propertyWithDefaultValue.Name) && propertyType == typeof(Guid)))
             {
@@ -620,7 +618,7 @@ public class TableInfo
             foreach (var configSpecifiedPropertyName in specifiedPropertiesList)
             {
 
-                if (!FastPropertyDict.Any(a => a.Key == configSpecifiedPropertyName) &&
+                if (FastPropertyDict.All(a => a.Key != configSpecifiedPropertyName) &&
                     !configSpecifiedPropertyName.Contains('.') && // Those with dot "." skiped from validating for now since FastPropertyDict here does not contain them
                     !(specifiedPropertiesListName == nameof(BulkConfig.PropertiesToIncludeOnUpdate) && configSpecifiedPropertyName == "") && // In PropsToIncludeOnUpdate empty is allowed as config for skipping Update
                     !BulkConfig.TemporalColumns.Contains(configSpecifiedPropertyName)
@@ -700,14 +698,14 @@ public class TableInfo
             var sqlConnection = context.Database.GetDbConnection();
             var currentTransaction = context.Database.CurrentTransaction;
 
-            using var command = sqlConnection.CreateCommand();
+            await using var command = sqlConnection.CreateCommand();
             if (currentTransaction != null)
                 command.Transaction = currentTransaction.GetDbTransaction();
             command.CommandText = SqlQueryBuilder.CheckTableExist(tableInfo.FullTempTableName, tableInfo.BulkConfig.UseTempDB);
 
             if (isAsync)
             {
-                using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+                await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
                 if (reader.HasRows)
                 {
                     while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
@@ -936,7 +934,7 @@ public class TableInfo
         if (doSetIdentityColumnsForInsertOrder)
         {
             bool sortEntities = !reset && BulkConfig.SetOutputIdentity &&
-                                (operationType == OperationType.Update || operationType == OperationType.InsertOrUpdate || operationType == OperationType.InsertOrUpdateOrDelete);
+                                operationType is OperationType.Update or OperationType.InsertOrUpdate or OperationType.InsertOrUpdateOrDelete;
             var entitiesExistingDict = new Dictionary<long, T>();
             var entitiesNew = new List<T>();
             var entitiesSorted = new List<T>();

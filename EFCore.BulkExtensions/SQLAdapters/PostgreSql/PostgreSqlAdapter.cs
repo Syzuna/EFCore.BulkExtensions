@@ -391,11 +391,11 @@ public class PostgreSqlAdapter : ISqlOperationsAdapter
             //var count = command.ExecuteScalar();
 
             command.CommandText = countUniqueConstrain;
-            context.Database.OpenConnection();
+            await context.Database.OpenConnectionAsync(cancellationToken);
 
             if (isAsync)
             {
-                using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+                await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
                 if (reader.HasRows)
                 {
                     while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
@@ -406,7 +406,7 @@ public class PostgreSqlAdapter : ISqlOperationsAdapter
             }
             else
             {
-                using var reader = command.ExecuteReader();
+                using var reader = await command.ExecuteReaderAsync(cancellationToken);
                 if (reader.HasRows)
                 {
                     while (reader.Read())

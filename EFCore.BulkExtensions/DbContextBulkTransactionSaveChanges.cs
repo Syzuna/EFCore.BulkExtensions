@@ -267,12 +267,12 @@ internal static class DbContextBulkTransactionSaveChanges
                     tree.TryAdd(navType, childNode);
                 };
 
-                if (!childNode.Parents.Any(a => a.Type == node.Type))
+                if (childNode.Parents.All(a => a.Type != node.Type))
                 {
                     childNode.Parents.Add(node);
                 }
 
-                if (!node.Children.Any(a => a.Type == navType))
+                if (node.Children.All(a => a.Type != navType))
                 {
                     node.Children.Add(childNode);
                 }
@@ -287,12 +287,12 @@ internal static class DbContextBulkTransactionSaveChanges
                     tree.TryAdd(navType, parentNode);
                 };
 
-                if (!parentNode.Children.Any(a => a.Type == node.Type))
+                if (parentNode.Children.All(a => a.Type != node.Type))
                 {
                     parentNode.Children.Add(node);
                 }
 
-                if (!node.Parents.Any(a => a.Type == parentNode.Type))
+                if (node.Parents.All(a => a.Type != parentNode.Type))
                 {
                     node.Parents.Add(parentNode);
                 }
@@ -313,7 +313,7 @@ internal static class DbContextBulkTransactionSaveChanges
 
                     foreach (var me in node.MethodEntries)
                     {
-                        if (me.Value != null && me.Value.Count > 0)
+                        if (me.Value is { Count: > 0 })
                         {
                             bulkMehodEntriesList.Add(new BulkMethodEntries()
                             {

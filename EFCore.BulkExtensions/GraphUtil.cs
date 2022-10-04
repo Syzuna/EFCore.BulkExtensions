@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
 
 namespace EFCore.BulkExtensions;
 
@@ -12,7 +11,8 @@ internal class GraphUtil
 {
     public static IEnumerable<GraphNode>? GetTopologicallySortedGraph(DbContext dbContext, IEnumerable<object> entities)
     {
-        if (!entities.Any())
+        var entitiesArray = entities.ToArray();
+        if (!entitiesArray.Any())
         {
             return null;
         }
@@ -20,7 +20,7 @@ internal class GraphUtil
         // Enumerate through all the entities and retrieve a flat list of all the entities with their dependencies
         var dependencies = new Dictionary<object, GraphDependency>();
 
-        foreach (var e in entities)
+        foreach (var e in entitiesArray)
         {
             GetFlatGraph(dbContext, e, dependencies);
         }

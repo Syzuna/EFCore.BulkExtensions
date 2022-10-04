@@ -639,7 +639,7 @@ public static class BatchUtil
     public static readonly Regex TableAliasPattern = new(@"(?:FROM|JOIN)\s+(\[\S+\]) AS (\[\S+\])", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     /// <summary>
-    /// Attempt to create a DbParameter using the <see cref="Microsoft.EntityFrameworkCore.Storage.RelationalTypeMapping.CreateParameter(DbCommand, string, object, bool?)"/>
+    /// Attempt to create a DbParameter using the <see cref="Microsoft.EntityFrameworkCore.Storage.RelationalTypeMapping.CreateParameter(DbCommand, string, object, bool?, ParameterDirection)"/>
     /// call for the specified column name.
     /// </summary>
     public static DbParameter? TryCreateRelationalMappingParameter(string? columnName, string parameterName, object? value, TableInfo? tableInfo)
@@ -656,7 +656,7 @@ public static class BatchUtil
             var relationalTypeMapping = propertyInfo?.GetRelationalTypeMapping();
 
             using var dbCommand = new SqlCommand();
-            return relationalTypeMapping?.CreateParameter(dbCommand, parameterName, value, propertyInfo?.IsNullable);
+            return relationalTypeMapping?.CreateParameter(dbCommand, parameterName, value, propertyInfo?.IsNullable, ParameterDirection.InputOutput);
         }
         catch (Exception) { }
 

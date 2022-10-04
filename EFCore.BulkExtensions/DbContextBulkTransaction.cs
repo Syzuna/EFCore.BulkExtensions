@@ -17,7 +17,7 @@ internal static class DbContextBulkTransaction
                 operationType != OperationType.InsertOrUpdateOrDelete && 
                 operationType != OperationType.Truncate && 
                 operationType != OperationType.SaveChanges &&
-                (bulkConfig == null || bulkConfig.CustomSourceTableName == null))
+                (bulkConfig?.CustomSourceTableName == null))
             {
                 return;
             }
@@ -25,7 +25,6 @@ internal static class DbContextBulkTransaction
             if (operationType == OperationType.SaveChanges)
             {
                 DbContextBulkTransactionSaveChanges.SaveChanges(context, bulkConfig, progress);
-                return;
             }
             else if (bulkConfig?.IncludeGraph == true)
             {

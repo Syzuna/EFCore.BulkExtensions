@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text.RegularExpressions;
 
 namespace EFCore.BulkExtensions;
 
@@ -176,8 +175,8 @@ public static class SqlQueryBuilder
     /// <returns></returns>
     public static string SelectIdentityColumnName(string tableName, string schemaName) // No longer used
     {
-        var q = $"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS " +
-                $"WHERE COLUMNPROPERTY(OBJECT_ID(TABLE_SCHEMA + '.' + TABLE_NAME), COLUMN_NAME, 'IsIdentity') = 1 " +
+        var q = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS " +
+                "WHERE COLUMNPROPERTY(OBJECT_ID(TABLE_SCHEMA + '.' + TABLE_NAME), COLUMN_NAME, 'IsIdentity') = 1 " +
                 $"AND TABLE_NAME = '{tableName}' AND TABLE_SCHEMA = '{schemaName}'";
         return q;
     }
@@ -288,9 +287,9 @@ public static class SqlQueryBuilder
                 $"ON {GetANDSeparatedColumns(primaryKeys, "T", "S", tableInfo.UpdateByPropertiesAreNullable)}";
         q += (primaryKeys.Count == 0) ? "1=0" : string.Empty;
 
-        if (operationType == OperationType.Insert || operationType == OperationType.InsertOrUpdate || operationType == OperationType.InsertOrUpdateOrDelete)
+        if (operationType is OperationType.Insert or OperationType.InsertOrUpdate or OperationType.InsertOrUpdateOrDelete)
         {
-            q += $" WHEN NOT MATCHED BY TARGET " +
+            q += " WHEN NOT MATCHED BY TARGET " +
                  $"THEN INSERT ({GetCommaSeparatedColumns(insertColumnsNames)})" +
                  $" VALUES ({GetCommaSeparatedColumns(insertColumnsNames, "S")})";
         }
@@ -298,7 +297,7 @@ public static class SqlQueryBuilder
         q = q.Replace("INSERT () VALUES ()", "INSERT DEFAULT VALUES"); // case when table has only one column that is Identity
 
 
-        if (operationType == OperationType.Update || operationType == OperationType.InsertOrUpdate || operationType == OperationType.InsertOrUpdateOrDelete)
+        if (operationType is OperationType.Update or OperationType.InsertOrUpdate or OperationType.InsertOrUpdateOrDelete)
         {
             if (updateColumnNames.Count == 0 && operationType == OperationType.Update)
             {
@@ -306,7 +305,7 @@ public static class SqlQueryBuilder
             }
             else if (updateColumnNames.Count > 0)
             {
-                q += $" WHEN MATCHED" +
+                q += " WHEN MATCHED" +
                      (tableInfo.BulkConfig.OmitClauseExistsExcept || tableInfo.HasSpatialType ? string.Empty : // The data type Geography (Spatial) cannot be used as an operand to the UNION, INTERSECT or EXCEPT operators because it is not comparable
                       $" AND EXISTS (SELECT {GetCommaSeparatedColumns(compareColumnNames, "S")}" + // EXISTS better handles nulls
                       $" EXCEPT SELECT {GetCommaSeparatedColumns(compareColumnNames, "T")})"       // EXCEPT does not update if all values are same
@@ -358,7 +357,7 @@ public static class SqlQueryBuilder
         if (tableInfo.CreatedOutputTable)
         {
             string commaSeparatedColumnsNames;
-            if (operationType == OperationType.InsertOrUpdateOrDelete || operationType == OperationType.Delete)
+            if (operationType is OperationType.InsertOrUpdateOrDelete or OperationType.Delete)
             {
                 commaSeparatedColumnsNames = string.Join(", ", outputColumnsNames.Select(x => $"COALESCE(INSERTED.[{x}], DELETED.[{x}])"));
             }
@@ -373,13 +372,12 @@ public static class SqlQueryBuilder
 
         Dictionary<string, string> sourceDestinationMappings = tableInfo.BulkConfig.CustomSourceDestinationMappingColumns ?? new();
         if (tableInfo.BulkConfig.CustomSourceTableName != null
-            && sourceDestinationMappings != null
-            && sourceDestinationMappings.Count > 0)
+            && sourceDestinationMappings is { Count: > 0 })
         {
             var textOrderBy = "ORDER BY ";
             var textAsS = " AS S";
-            int startIndex = q.IndexOf(textOrderBy);
-            var qSegment = q[startIndex..q.IndexOf(textAsS)];
+            int startIndex = q.IndexOf(textOrderBy, StringComparison.Ordinal);
+            var qSegment = q[startIndex..q.IndexOf(textAsS, StringComparison.Ordinal)];
             var qSegmentUpdated = qSegment;
             foreach (var mapping in sourceDestinationMappings)
             {

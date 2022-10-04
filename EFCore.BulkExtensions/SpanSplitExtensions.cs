@@ -12,39 +12,39 @@ static class SpanSplitExtensions
 
     public ref struct TokenSplitEnumerator<T> where T : IEquatable<T>
     {
-        readonly ReadOnlySpan<T> _delimiters;
-        ReadOnlySpan<T> _span;
+        private readonly ReadOnlySpan<T> _delimiters;
+        private ReadOnlySpan<T> _span;
 
         public TokenSplitEntry<T> Current { get; private set; }
 
         public TokenSplitEnumerator(ReadOnlySpan<T> span, ReadOnlySpan<T> delimiters)
         {
-            this._span = span;
-            this._delimiters = delimiters;
-            this.Current = default;
+            _span = span;
+            _delimiters = delimiters;
+            Current = default;
         }
 
         public TokenSplitEnumerator<T> GetEnumerator() => this;
 
         public bool MoveNext()
         {
-            var span = this._span;
+            var span = _span;
 
             if (span.Length == 0)
             {
                 return false;
             }
 
-            var index = span.IndexOfAny(this._delimiters);
+            var index = span.IndexOfAny(_delimiters);
             if (index == -1)
             {
-                this._span = ReadOnlySpan<T>.Empty;
-                this.Current = new TokenSplitEntry<T>(span, ReadOnlySpan<T>.Empty);
+                _span = ReadOnlySpan<T>.Empty;
+                Current = new TokenSplitEntry<T>(span, ReadOnlySpan<T>.Empty);
                 return true;
             }
 
-            this.Current = new TokenSplitEntry<T>(span[..index], span.Slice(index, 1));
-            this._span = span[(index + 1)..];
+            Current = new TokenSplitEntry<T>(span[..index], span.Slice(index, 1));
+            _span = span[(index + 1)..];
 
             return true;
         }
@@ -57,14 +57,14 @@ static class SpanSplitExtensions
         
         public TokenSplitEntry(ReadOnlySpan<T> token, ReadOnlySpan<T> delimiters)
         {
-            this.Token = token;
-            this.Delimiters = delimiters;
+            Token = token;
+            Delimiters = delimiters;
         }
 
         public void Deconstruct(out ReadOnlySpan<T> token, out ReadOnlySpan<T> delimiters)
         {
-            token = this.Token;
-            delimiters = this.Delimiters;
+            token = Token;
+            delimiters = Delimiters;
         }
 
         public static implicit operator ReadOnlySpan<T>(TokenSplitEntry<T> entry) => entry.Token;

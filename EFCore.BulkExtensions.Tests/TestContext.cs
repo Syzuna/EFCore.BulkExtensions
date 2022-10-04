@@ -269,22 +269,22 @@ public static class ContextUtil
 
     public static string GetSqlServerConnectionString(string databaseName)
     {
-        return GetConfiguration().GetConnectionString("SqlServer").Replace("{databaseName}", databaseName);
+        return GetConfiguration().GetConnectionString("SqlServer")!.Replace("{databaseName}", databaseName);
     }
 
     public static string GetSqliteConnectionString(string databaseName)
     {
-        return GetConfiguration().GetConnectionString("Sqlite").Replace("{databaseName}", databaseName);
+        return GetConfiguration().GetConnectionString("Sqlite")!.Replace("{databaseName}", databaseName);
     }
 
     public static string GetPostgreSqlConnectionString(string databaseName)
     {
-        return GetConfiguration().GetConnectionString("PostgreSql").Replace("{databaseName}", databaseName);
+        return GetConfiguration().GetConnectionString("PostgreSql")!.Replace("{databaseName}", databaseName);
     }
 
     public static string GetMySqlConnectionString(string databaseName)
     {
-        return GetConfiguration().GetConnectionString("MySql").Replace("{databaseName}", databaseName);
+        return GetConfiguration().GetConnectionString("MySql")!.Replace("{databaseName}", databaseName);
     }
 }
 
