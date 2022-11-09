@@ -1,11 +1,10 @@
 using EFCore.BulkExtensions.SqlAdapters;
-using EFCore.BulkExtensions.SQLAdapters.SQLServer;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata.Internal;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -17,9 +16,6 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using EFCore.BulkExtensions.SqlAdapters.MySql;
-using MySqlConnector;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata.Internal;
 
 namespace EFCore.BulkExtensions;
 
@@ -84,19 +80,12 @@ public class TableInfo
     protected IList<object>? EntitiesSortedReference { get; set; } // Operation Merge writes In Output table first Existing that were Updated then for new that were Inserted so this makes sure order is same in list when need to set Output
 
     public StoreObjectIdentifier ObjectIdentifier { get; set; }
-
-    //Sqlite
-    internal SqliteConnection? SqliteConnection { get; set; }
-    internal SqliteTransaction? SqliteTransaction { get; set; }
-
+    
 
     //PostgreSql
     internal NpgsqlConnection? NpgsqlConnection { get; set; }
     //internal NpgsqlTransaction? NpgsqlTransaction { get; set; }
     
-    //MySql
-    internal MySqlConnection? MySqlConnection { get; set; }
-
 
 #pragma warning restore CS1591 // No XML comments required here.
 
@@ -164,8 +153,6 @@ public class TableInfo
         string? providerName = context.Database.ProviderName?.ToLower();
         bool isSqlServer = providerName?.EndsWith(DbServer.SQLServer.ToString().ToLower()) ?? false;
         bool isNpgsql = providerName?.EndsWith(DbServer.PostgreSQL.ToString().ToLower()) ?? false;
-        bool isSqlite = providerName?.EndsWith(DbServer.SQLite.ToString().ToLower()) ?? false;
-        bool isMySql = providerName?.EndsWith(DbServer.MySQL.ToString().ToLower()) ?? false;
 
         string? defaultSchema = isSqlServer ? "dbo" : null;
 
@@ -276,7 +263,7 @@ public class TableInfo
         HasOwnedTypes = ownedTypes.Any();
         OwnedTypesDict = ownedTypes.ToDictionary(a => a.Name, a => a);
 
-        if (isSqlServer || isNpgsql || isMySql)
+        if (isSqlServer || isNpgsql)
         {
             var strategyName = string.Empty;
             if (isSqlServer)
@@ -288,10 +275,6 @@ public class TableInfo
 #pragma warning disable EF1001
                 strategyName = NpgsqlAnnotationNames.ValueGenerationStrategy; // strategyName = nameof(Npgsql.EntityFrameworkCore.PostgreSQL.Metadata.NpgsqlValueGenerationStrategy);
 #pragma warning restore EF1001
-            }
-            else
-            {
-                strategyName = nameof(MySqlValueGenerationStrategy);
             }
 
             if (!strategyName.Contains(":Value"))
@@ -313,10 +296,6 @@ public class TableInfo
                     {
                         hasIdentity = (Npgsql.EntityFrameworkCore.PostgreSQL.Metadata.NpgsqlValueGenerationStrategy?)annotation.Value == Npgsql.EntityFrameworkCore.PostgreSQL.Metadata.NpgsqlValueGenerationStrategy.IdentityByDefaultColumn;
                     }
-                    else
-                    {
-                        hasIdentity = (MySqlValueGenerationStrategy?) annotation.Value == MySqlValueGenerationStrategy.IdentityColumn;
-                    }
                 }
                 if (hasIdentity)
                 {
@@ -324,18 +303,6 @@ public class TableInfo
                     break;
                 }
             }
-        }
-        if (isSqlite) // SQLite no ValueGenerationStrategy
-        {
-            // for HiLo on SqlServer was returning True when should be False
-            IdentityColumnName = allProperties.SingleOrDefault(a => a.IsPrimaryKey() &&
-                                                    a.ValueGenerated == ValueGenerated.OnAdd && // ValueGenerated equals OnAdd for nonIdentity column like Guid so take only number types
-                                                    (a.ClrType.Name.StartsWith("Byte") ||
-                                                     a.ClrType.Name.StartsWith("SByte") ||
-                                                     a.ClrType.Name.StartsWith("Int") ||
-                                                     a.ClrType.Name.StartsWith("UInt") ||
-                                                     (isSqlServer && a.ClrType.Name.StartsWith("Decimal")))
-                                              )?.GetColumnName(ObjectIdentifier);
         }
 
         // timestamp/row version properties are only set by the Db, the property has a [Timestamp] Attribute or is configured in FluentAPI with .IsRowVersion()
@@ -657,17 +624,6 @@ public class TableInfo
                 sqlBulkCopy.ColumnMappings.Add(element.Key, element.Value);
             }
         }
-    }
-    /// <summary>
-    /// Supports <see cref="MySqlConnector.MySqlBulkCopy"/>
-    /// </summary>
-    /// <param name="mySqlBulkCopy"></param>
-    public void SetMySqlBulkCopyConfig(MySqlBulkCopy mySqlBulkCopy)
-    {
-        mySqlBulkCopy.DestinationTableName = InsertToTempTable ? FullTempTableName : FullTableName;
-        mySqlBulkCopy.DestinationTableName = mySqlBulkCopy.DestinationTableName.Replace("[", "").Replace("]", "");
-        mySqlBulkCopy.NotifyAfter = BulkConfig.NotifyAfter ?? BulkConfig.BatchSize;
-        mySqlBulkCopy.BulkCopyTimeout = BulkConfig.BulkCopyTimeout ?? mySqlBulkCopy.BulkCopyTimeout;
     }
     #endregion
 
@@ -1135,7 +1091,7 @@ public class TableInfo
         if (BulkConfig.SetOutputIdentity && hasIdentity)
         {
             var databaseType = SqlAdaptersMapping.GetDatabaseType(context);
-            string sqlQuery = databaseType == DbServer.SQLServer? SqlQueryBuilder.SelectFromOutputTable(this) : SqlQueryBuilderMySql.SelectFromOutputTable(this);
+            string sqlQuery = databaseType == DbServer.SQLServer ? SqlQueryBuilder.SelectFromOutputTable(this) : string.Empty;
             //var entitiesWithOutputIdentity = await QueryOutputTableAsync<T>(context, sqlQuery).ToListAsync(cancellationToken).ConfigureAwait(false); // TempFIX
             var entitiesWithOutputIdentity = QueryOutputTable(context, type, sqlQuery).Cast<object>().ToList();
             //var entitiesWithOutputIdentity = (typeof(T) == type) ? QueryOutputTable<object>(context, sqlQuery).ToList() : QueryOutputTable(context, type, sqlQuery).Cast<object>().ToList();

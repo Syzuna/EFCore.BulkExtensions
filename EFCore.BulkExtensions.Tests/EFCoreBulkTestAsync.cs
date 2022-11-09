@@ -22,7 +22,6 @@ public class EFCoreBulkTestAsync
 
     [Theory]
     [InlineData(DbServer.SQLServer, true)]
-    [InlineData(DbServer.SQLite, true)]
     //[InlineData(DatabaseType.SqlServer, false)] // for speed comparison with Regular EF CUD operations
     public async Task OperationsTestAsync(DbServer dbServer, bool isBulk)
     {
@@ -82,7 +81,6 @@ public class EFCoreBulkTestAsync
 
             createTableSql = dbServer switch
             {
-                DbServer.SQLite => $"CREATE TEMPORARY {createTableSql}",
                 DbServer.SQLServer => $"CREATE {createTableSql}",
                 _ => throw new ArgumentException($"Unknown database type: '{dbServer}'.", nameof(dbServer)),
             };
@@ -160,28 +158,6 @@ public class EFCoreBulkTestAsync
                 }
 
                 await context.BulkInsertAsync(subEntities);
-
-                await transaction.CommitAsync();
-            }
-            else if (ContextUtil.DbServer == DbServer.SQLite)
-            {
-                using var transaction = await context.Database.BeginTransactionAsync();
-
-                var bulkConfig = new BulkConfig()
-                {
-                    SetOutputIdentity = true,
-                };
-                await context.BulkInsertAsync(entities, bulkConfig);
-
-                foreach (var entity in entities)
-                {
-                    foreach (var subEntity in entity.ItemHistories)
-                    {
-                        subEntity.ItemId = entity.ItemId; // setting FK to match its linked PK that was generated in DB
-                    }
-                    subEntities.AddRange(entity.ItemHistories);
-                }
-                await context.BulkInsertAsync(subEntities, bulkConfig);
 
                 await transaction.CommitAsync();
             }
@@ -405,7 +381,6 @@ public class EFCoreBulkTestAsync
         string deleteTableSql = dbServer switch
         {
             DbServer.SQLServer => $"DBCC CHECKIDENT('[dbo].[{nameof(Item)}]', RESEED, 0);",
-            DbServer.SQLite => $"DELETE FROM sqlite_sequence WHERE name = '{nameof(Item)}';",
             _ => throw new ArgumentException($"Unknown database type: '{dbServer}'.", nameof(dbServer)),
         };
         await context.Database.ExecuteSqlRawAsync(deleteTableSql).ConfigureAwait(false);

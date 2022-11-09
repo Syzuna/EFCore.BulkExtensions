@@ -1,10 +1,8 @@
 ﻿using EFCore.BulkExtensions.SQLAdapters.PostgreSql;
-using EFCore.BulkExtensions.SQLAdapters.SQLite;
 using EFCore.BulkExtensions.SQLAdapters.SQLServer;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.ComponentModel;
-using EFCore.BulkExtensions.SqlAdapters.MySql;
 
 namespace EFCore.BulkExtensions.SqlAdapters;
 
@@ -18,24 +16,11 @@ public enum DbServer
     /// </summary>
     [Description("SqlServer")] //DbProvider name in attribute
     SQLServer,
-
-    /// <summary>
-    /// Indicates database is SQL Lite
-    /// </summary>
-    [Description("Sqlite")]
-    SQLite,
-
     /// <summary>
     /// Indicates database is Npgql
     /// </summary>
     [Description("Npgql")]
-    PostgreSQL,
-
-    /// <summary>
-    ///  Indicates database is MySQL
-    /// </summary>
-    [Description("MySql")]
-    MySQL,
+    PostgreSQL
 }
 
 #pragma warning disable CS1591 // No XML comment required here
@@ -49,9 +34,7 @@ public static class SqlAdaptersMapping
         new()
         {
             {DbServer.SQLServer, new SqlOperationsServerAdapter()},
-            {DbServer.SQLite, new SqliteOperationsAdapter()},
-            {DbServer.PostgreSQL, new PostgreSqlAdapter()},
-            {DbServer.MySQL, new MySqLAdapter()}
+            {DbServer.PostgreSQL, new PostgreSqlAdapter()}
         };
 
     /// <summary>
@@ -61,9 +44,7 @@ public static class SqlAdaptersMapping
         new()
         {
             {DbServer.SQLServer, new SqlServerDialect()},
-            {DbServer.SQLite, new SqliteDialect()},
-            {DbServer.PostgreSQL, new PostgreSqlDialect()},
-            {DbServer.MySQL, new MySqlDialect()}
+            {DbServer.PostgreSQL, new PostgreSqlDialect()}
         };
 
     /// <summary>
@@ -106,12 +87,8 @@ public static class SqlAdaptersMapping
     public static DbServer GetDatabaseType(DbContext context)
     {
         var databaseType = DbServer.SQLServer;
-        if (context.Database.IsSqlite())
-            databaseType = DbServer.SQLite;
         if (context.Database.IsNpgsql())
             databaseType = DbServer.PostgreSQL;
-        if (context.Database.IsMySql())
-            databaseType = DbServer.MySQL;
 
         return databaseType;
     }

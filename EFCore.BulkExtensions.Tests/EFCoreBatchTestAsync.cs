@@ -1,6 +1,5 @@
 ﻿using EFCore.BulkExtensions.SqlAdapters;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,7 +14,6 @@ public class EFCoreBatchTestAsync
 
     [Theory]
     [InlineData(DbServer.SQLServer)]
-    [InlineData(DbServer.SQLite)]
     public async Task BatchTestAsync(DbServer dbServer)
     {
         ContextUtil.DbServer = dbServer;
@@ -100,7 +98,6 @@ WHERE [p].[PhoneNumber] = @__oldPhoneNumber_0";
         string deleteTableSql = dbServer switch
         {
             DbServer.SQLServer => $"DBCC CHECKIDENT('[dbo].[{nameof(Item)}]', RESEED, 0);",
-            DbServer.SQLite => $"DELETE FROM sqlite_sequence WHERE name = '{nameof(Item)}';",
             _ => throw new ArgumentException($"Unknown database type: '{dbServer}'.", nameof(dbServer)),
         };
         context.Database.ExecuteSqlRaw(deleteTableSql);
@@ -140,10 +137,6 @@ WHERE [p].[PhoneNumber] = @__oldPhoneNumber_0";
         if (dbServer == DbServer.SQLServer)
         {
             query = query.Where(a => a.ItemId <= 500 && a.Price >= price);
-        }
-        if (dbServer == DbServer.SQLite)
-        {
-            query = query.Where(a => a.ItemId <= 500); // Sqlite currently does Not support multiple conditions
         }
 
         await query.BatchUpdateAsync(new Item { Description = "Updated" }/*, updateColumns*/);

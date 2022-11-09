@@ -15,14 +15,12 @@ public class EFCoreBulkTestAtypical
 
     [Theory]
     [InlineData(DbServer.SQLServer)]
-    [InlineData(DbServer.SQLite)]
     private void DefaultValuesTest(DbServer dbServer)
     {
         ContextUtil.DbServer = dbServer;
         using var context = new TestContext(ContextUtil.GetOptions());
         context.Truncate<Document>();
         context.Documents.BatchDelete();
-        bool isSqlite = dbServer == DbServer.SQLite;
 
         var entities = new List<Document>() 
         {
@@ -122,13 +120,11 @@ public class EFCoreBulkTestAtypical
 
     [Theory]
     [InlineData(DbServer.SQLServer)]
-    [InlineData(DbServer.SQLite)] // Does NOT have Computed Columns
     private void ComputedAndDefaultValuesTest(DbServer dbServer)
     {
         ContextUtil.DbServer = dbServer;
         using var context = new TestContext(ContextUtil.GetOptions());
         context.Truncate<Document>();
-        bool isSqlite = dbServer == DbServer.SQLite;
 
         var entities = new List<Document>();
         for (int i = 1; i <= EntitiesNumber; i++)
@@ -137,11 +133,7 @@ public class EFCoreBulkTestAtypical
             {
                 Content = "Info " + i
             };
-            if (isSqlite)
-            {
-                entity.DocumentId = Guid.NewGuid();
-                entity.ContentLength = entity.Content.Length;
-            }
+
             entities.Add(entity);
         }
         context.BulkInsert(entities, bulkAction => bulkAction.SetOutputIdentity = true); // example of setting BulkConfig with Action argument
@@ -159,11 +151,7 @@ public class EFCoreBulkTestAtypical
             new Document { Content = "Info " + (count + 1) }, // to test adding new with InsertOrUpdate (entity having Guid DbGenerated)
             new Document { Content = "Info " + (count + 2) }
         };
-        if (isSqlite)
-        {
-            upsertList[0].DocumentId = Guid.NewGuid(); //[1]
-            upsertList[1].DocumentId = Guid.NewGuid(); //[2]
-        }
+
         count += 2;
 
         context.BulkInsertOrUpdate(upsertList);
@@ -180,7 +168,6 @@ public class EFCoreBulkTestAtypical
 
     [Theory]
     [InlineData(DbServer.SQLServer)]
-    [InlineData(DbServer.SQLite)] // Does NOT have Computed Columns
     private void ParameterlessConstructorTest(DbServer dbServer)
     {
         ContextUtil.DbServer = dbServer;
@@ -278,7 +265,6 @@ public class EFCoreBulkTestAtypical
 
     [Theory]
     [InlineData(DbServer.SQLServer)]
-    [InlineData(DbServer.SQLite)]
     private void CompositeKeyTest(DbServer dbServer)
     {
         ContextUtil.DbServer = dbServer;
@@ -321,7 +307,6 @@ public class EFCoreBulkTestAtypical
 
     [Theory]
     [InlineData(DbServer.SQLServer)]
-    [InlineData(DbServer.SQLite)]
     private void DiscriminatorShadowTest(DbServer dbServer)
     {
         ContextUtil.DbServer = dbServer;
@@ -366,7 +351,6 @@ public class EFCoreBulkTestAtypical
 
     [Theory]
     [InlineData(DbServer.SQLServer)]
-    [InlineData(DbServer.SQLite)]
     private void ValueConversionTest(DbServer dbServer)
     {
         ContextUtil.DbServer = dbServer;
@@ -416,7 +400,6 @@ public class EFCoreBulkTestAtypical
 
     [Theory]
     [InlineData(DbServer.SQLServer)]
-    [InlineData(DbServer.SQLite)]
     [InlineData(DbServer.PostgreSQL)]
     private void OwnedTypesTest(DbServer dbServer)
     {
@@ -656,7 +639,6 @@ public class EFCoreBulkTestAtypical
 
     [Theory]
     [InlineData(DbServer.SQLServer)]
-    [InlineData(DbServer.SQLite)]
     private void NoPrimaryKeyTest(DbServer dbServer)
     {
         ContextUtil.DbServer = dbServer;
@@ -694,7 +676,6 @@ public class EFCoreBulkTestAtypical
 
     [Theory]
     [InlineData(DbServer.SQLServer)]
-    [InlineData(DbServer.SQLite)]
     private void NonEntityChildTest(DbServer dbServer)
     {
         ContextUtil.DbServer = dbServer;
@@ -1059,7 +1040,6 @@ public class EFCoreBulkTestAtypical
     [Fact]
     private void ByteArrayPKBulkReadTest()
     {
-        ContextUtil.DbServer = DbServer.SQLite;
         using var context = new TestContext(ContextUtil.GetOptions());
 
         var list = context.Archives.ToList();
@@ -1092,7 +1072,6 @@ public class EFCoreBulkTestAtypical
     
     [Theory]
     [InlineData(DbServer.SQLServer)]
-    [InlineData(DbServer.SQLite)]
     private void PrivateKeyTest(DbServer dbServer)
     {
         ContextUtil.DbServer = dbServer;

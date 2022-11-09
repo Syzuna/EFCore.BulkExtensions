@@ -11,7 +11,6 @@ public class ValueConverterTests: IDisposable
 {
     [Theory]
     [InlineData(DbServer.SQLServer)]
-    [InlineData(DbServer.SQLite)]
     public void BulkInsertOrUpdate_EntityUsingBuiltInEnumToStringConverter_SavesToDatabase(DbServer dbServer)
     {
         ContextUtil.DbServer = dbServer;
@@ -37,7 +36,6 @@ public class ValueConverterTests: IDisposable
 
     [Theory]
     [InlineData(DbServer.SQLServer)]
-    [InlineData(DbServer.SQLite)]
     public void BatchUpdate_EntityUsingBuiltInEnumToStringConverter_UpdatesDatabaseWithEnumStringValue(DbServer dbServer)
     {
         ContextUtil.DbServer = dbServer;
@@ -69,7 +67,6 @@ public class ValueConverterTests: IDisposable
 
     [Theory]
     [InlineData(DbServer.SQLServer)]
-    [InlineData(DbServer.SQLite)]
     public void BatchDelete_UsingWhereExpressionWithValueConverter_Deletes(DbServer dbServer)
     {
         ContextUtil.DbServer = dbServer;

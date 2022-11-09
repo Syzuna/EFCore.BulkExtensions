@@ -12,7 +12,6 @@ public class EFCoreBulkTestSaveChanges
 {
     [Theory]
     [InlineData(DbServer.SQLServer)]
-    [InlineData(DbServer.SQLite)]
     public void SaveChangesTest(DbServer dbServer)
     {
         ContextUtil.DbServer = dbServer;
@@ -29,7 +28,6 @@ public class EFCoreBulkTestSaveChanges
 
     [Theory]
     [InlineData(DbServer.SQLServer)]
-    [InlineData(DbServer.SQLite)]
     public async Task SaveChangesTestAsync(DbServer dbServer)
     {
         ContextUtil.DbServer = dbServer;

@@ -138,20 +138,13 @@ public class TestContext : DbContext
             modelBuilder.Entity<Tracker>().OwnsOne(t => t.Location).Ignore(p => p.Location); // Point only on SqlServer
         }
 
-        if (Database.IsSqlite() || Database.IsNpgsql() || Database.IsMySql())
+        if (Database.IsNpgsql())
         {
             modelBuilder.Entity<Address>().Ignore(p => p.LocationGeography);
             modelBuilder.Entity<Address>().Ignore(p => p.LocationGeometry);
             modelBuilder.Entity<Category>().Ignore(p => p.HierarchyDescription);
 
             modelBuilder.Entity<Event>().Ignore(p => p.TimeCreated);
-        }
-
-        if (Database.IsSqlite())
-        {
-            modelBuilder.Entity<File>().Property(p => p.VersionChange).ValueGeneratedOnAddOrUpdate().IsConcurrencyToken().HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-            modelBuilder.Entity<ItemHistory>().ToTable(nameof(ItemHistory));
         }
 
         if (Database.IsNpgsql())
@@ -171,7 +164,7 @@ public class TestContext : DbContext
         modelBuilder.Entity<AtypicalRowVersionEntity>().Property(e => e.RowVersion).HasDefaultValue(0).IsConcurrencyToken().ValueGeneratedOnAddOrUpdate().Metadata.SetBeforeSaveBehavior(PropertySaveBehavior.Save);
         modelBuilder.Entity<AtypicalRowVersionEntity>().Property(e => e.SyncDevice).IsRequired(true).IsConcurrencyToken().HasDefaultValue("");
 
-        if (!Database.IsNpgsql() && !Database.IsMySql())
+        if (!Database.IsNpgsql())
         {
             modelBuilder.Entity<AtypicalRowVersionConverterEntity>().Property(e => e.RowVersionConverted).HasConversion(new NumberToBytesConverter<long>()).HasColumnType("timestamp").IsRowVersion().IsConcurrencyToken();
         }
@@ -225,25 +218,10 @@ public static class ContextUtil
                 conf.UseHierarchyId();
             });
         }
-        else if (dbServerType == DbServer.SQLite)
-        {
-            string connectionString = GetSqliteConnectionString(databaseName);
-            optionsBuilder.UseSqlite(connectionString);
-            SQLitePCL.Batteries.Init();
-
-            // ALTERNATIVELY:
-            //string connectionString = (new SqliteConnectionStringBuilder { DataSource = $"{databaseName}Lite.db" }).ToString();
-            //optionsBuilder.UseSqlite(new SqliteConnection(connectionString));
-        }
         else if (DbServer == DbServer.PostgreSQL)
         {
             string connectionString = GetPostgreSqlConnectionString(databaseName);
             optionsBuilder.UseNpgsql(connectionString);
-        }
-        else if (DbServer == DbServer.MySQL)
-        {
-            string connectionString = GetMySqlConnectionString(databaseName);
-            optionsBuilder.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
         }
         else
         {

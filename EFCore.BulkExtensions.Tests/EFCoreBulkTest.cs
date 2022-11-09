@@ -220,104 +220,7 @@ public class EFCoreBulkTest
     }
 
     [Theory]
-    [InlineData(DbServer.MySQL)]
-    public void InsertTestMySQL(DbServer dbServer)
-    {
-        ContextUtil.DbServer = dbServer;
-
-        using var context = new TestContext(ContextUtil.GetOptions());
-
-        var currentTime = DateTime.UtcNow; // default DateTime type: "timestamp with time zone"; DateTime.Now goes with: "timestamp without time zone"
-
-        context.Items.RemoveRange(context.Items.ToList());
-        context.SaveChanges();
-        context.Database.ExecuteSqlRaw("ALTER TABLE " + nameof(Item) + " AUTO_INCREMENT = 1");
-        context.SaveChanges();
-
-        var entities1 = new List<Item>();
-        for (int i = 1; i <= 10; i++)
-        {
-            var entity = new Item
-            {
-                //ItemId = i,
-                Name = "Name " + i,
-                Description = "info " + i,
-                Quantity = i,
-                Price = 0.1m * i,
-                TimeUpdated = currentTime,
-            };
-            entities1.Add(entity);
-        }
-
-        var entities2 = new List<Item>();
-        
-        for (int i = 6; i <= 15; i++)
-        {
-            var entity = new Item
-            {
-                ItemId = i,
-                Name = "Name " + i,
-                Description = "v2 info " + i,
-                Quantity = i,
-                Price = 0.1m * i,
-                TimeUpdated = currentTime,
-            };
-            entities2.Add(entity);
-        }
-        var entities3 = new List<Item>();
-        var entities4 = new List<Item>();
-
-        // INSERT
-
-        context.BulkInsert(entities1, bc => bc.SetOutputIdentity = true);
-        Assert.Equal(1, entities1[0].ItemId);
-        Assert.Equal("info 1", context.Items.Where(a => a.Name == "Name 1").AsNoTracking().FirstOrDefault()?.Description);
-        Assert.Equal("info 2", context.Items.Where(a => a.Name == "Name 2").AsNoTracking().FirstOrDefault()?.Description);
-
-        // INSERT Or UPDATE
-        //mysql automatically detects unique or primary key
-        context.BulkInsertOrUpdate(entities2, new BulkConfig { UpdateByProperties  = new List<string> { nameof(Item.ItemId) } });
-        Assert.Equal("info 5", context.Items.Where(a => a.Name == "Name 5").AsNoTracking().FirstOrDefault()?.Description);
-        Assert.Equal("v2 info 6", context.Items.Where(a => a.Name == "Name 6").AsNoTracking().FirstOrDefault()?.Description);
-        Assert.Equal("v2 info 15", context.Items.Where(a => a.Name == "Name 15").AsNoTracking().FirstOrDefault()?.Description);
-        
-        entities3.AddRange(context.Items.Where(a => a.ItemId <= 2).AsNoTracking());
-        foreach (var entity in entities3)
-        {
-            entity.Description = "UPDATED";
-        }
-        context.BulkUpdate(entities3);
-        Assert.Equal("UPDATED", context.Items.Where(a => a.Name == "Name 1").AsNoTracking().FirstOrDefault()?.Description);
-
-        // TODO Custom UpdateBy column not working
-        entities4.AddRange(context.Items.Where(a => a.ItemId >= 3 && a.ItemId <= 4).AsNoTracking());
-        foreach (var entity in entities4)
-        {
-            entity.ItemId = 0; // should be matched by Name
-            entity.Description = "UPDATED 2";
-        }
-        var configUpdateBy = new BulkConfig { UpdateByProperties = new List<string> { nameof(Item.Name) } }; // SetOutputIdentity = true;
-        context.BulkUpdate(entities4, configUpdateBy);
-        Assert.Equal("UPDATED 2", context.Items.Where(a => a.Name == "Name 3").AsNoTracking().FirstOrDefault()?.Description);
-
-        context.BulkDelete(new List<Item> { new Item { ItemId = 11 } });
-        Assert.False(context.Items.Where(a => a.Name == "Name 11").AsNoTracking().Any());
-
-        var entities5 = context.Items.Where(a => a.ItemId == 15).AsNoTracking().ToList();
-        entities5[0].Description = "SaveCh upd";
-        entities5.Add(new Item { ItemId = 16, Name = "Name 16", Description = "info 16" }); // when BulkSaveChanges with Upsert 'ItemId' has to be set(EX.My1), and with Insert only it skips one number, Id becomes 17 instead of 16
-        context.AddRange(entities5);
-        context.BulkSaveChanges();
-        Assert.Equal(16, entities5[1].ItemId);
-        Assert.Equal("info 16", context.Items.Where(a => a.Name == "Name 16").AsNoTracking().FirstOrDefault()?.Description);
-
-        //EX.My1: "The property 'Item.ItemId' has a temporary value while attempting to change the entity's state to 'Unchanged'.
-        //         Either set a permanent value explicitly, or ensure that the database is configured to generate values for this property."
-    }
-
-    [Theory]
     [InlineData(DbServer.SQLServer, true)]
-    [InlineData(DbServer.SQLite, true)]
     //[InlineData(DbServer.SqlServer, false)] // for speed comparison with Regular EF CUD operations
     public void OperationsTest(DbServer dbServer, bool isBulk)
     {
@@ -343,7 +246,6 @@ public class EFCoreBulkTest
 
     [Theory]
     [InlineData(DbServer.SQLServer)]
-    [InlineData(DbServer.SQLite)]
     public void SideEffectsTest(DbServer dbServer)
     {
         BulkOperationShouldNotCloseOpenConnection(dbServer, context => context.BulkInsert(new[] { new Item() }));
@@ -367,7 +269,6 @@ public class EFCoreBulkTest
 
             createTableSql = dbServer switch
             {
-                DbServer.SQLite => $"CREATE TEMPORARY {createTableSql}",
                 DbServer.SQLServer => $"CREATE {createTableSql}",
                 _ => throw new ArgumentException($"Unknown database type: '{dbServer}'.", nameof(dbServer)),
             };
@@ -469,25 +370,6 @@ public class EFCoreBulkTest
                     subEntities.AddRange(entity.ItemHistories);
                 }
                 context.BulkInsert(subEntities);
-
-                transaction.Commit();
-            }
-            else if (ContextUtil.DbServer == DbServer.SQLite)
-            {
-                using var transaction = context.Database.BeginTransaction();
-                var bulkConfig = new BulkConfig() { SetOutputIdentity = true };
-                context.BulkInsert(entities, bulkConfig);
-
-                foreach (var entity in entities)
-                {
-                    foreach (var subEntity in entity.ItemHistories)
-                    {
-                        subEntity.ItemId = entity.ItemId; // setting FK to match its linked PK that was generated in DB
-                    }
-                    subEntities.AddRange(entity.ItemHistories);
-                }
-                bulkConfig.SetOutputIdentity = false;
-                context.BulkInsert(subEntities, bulkConfig);
 
                 transaction.Commit();
             }
@@ -709,7 +591,6 @@ public class EFCoreBulkTest
         string deleteTableSql = dbServer switch
         {
             DbServer.SQLServer => $"DBCC CHECKIDENT('[dbo].[{nameof(Item)}]', RESEED, 0);",
-            DbServer.SQLite => $"DELETE FROM sqlite_sequence WHERE name = '{nameof(Item)}';",
             _ => throw new ArgumentException($"Unknown database type: '{dbServer}'.", nameof(dbServer)),
         };
         context.Database.ExecuteSqlRaw(deleteTableSql);

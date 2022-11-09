@@ -11,7 +11,6 @@ public class ShadowPropertyTests : IDisposable
 {
     [Theory]
     [InlineData(DbServer.SQLServer)]
-    [InlineData(DbServer.SQLite)]
     public void BulkInsertOrUpdate_EntityWithShadowProperties_SavesToDatabase(DbServer dbServer)
     {
         ContextUtil.DbServer = dbServer;
@@ -32,7 +31,6 @@ public class ShadowPropertyTests : IDisposable
 
     [Theory]
     [InlineData(DbServer.SQLServer)]
-    [InlineData(DbServer.SQLite)]
     public void BulkInsertOrUpdate_EntityWithShadowProperties_GlobalFunc_SavesToDatabase(DbServer dbServer)
     {
         ContextUtil.DbServer = dbServer;

@@ -36,7 +36,6 @@ public class EFCoreBatchTest
 
     [Theory]
     [InlineData(DbServer.SQLServer)]
-    [InlineData(DbServer.SQLite)]
     public void BatchTest(DbServer dbServer)
     {
         ContextUtil.DbServer = dbServer;
@@ -109,7 +108,6 @@ public class EFCoreBatchTest
         string deleteTableSql = dbServer switch
         {
             DbServer.SQLServer => $"DBCC CHECKIDENT('[dbo].[{nameof(Item)}]', RESEED, 0);",
-            DbServer.SQLite => $"DELETE FROM sqlite_sequence WHERE name = '{nameof(Item)}';",
             DbServer.PostgreSQL => $@"ALTER SEQUENCE ""{nameof(Item)}_{nameof(Item.ItemId)}_seq"" RESTART WITH 1;",
             _ => throw new ArgumentException($"Unknown database type: '{dbServer}'.", nameof(dbServer)),
         };
@@ -128,18 +126,6 @@ public class EFCoreBatchTest
         if (dbServer == DbServer.SQLServer)
         {
             query = query.Where(a => a.ItemId <= 500 && a.Price >= price);//.OrderBy(n => n.ItemId).Take(500);
-        }
-        if (dbServer == DbServer.SQLite)
-        {
-            query = query.Where(a => a.ItemId <= 500 && a.Price != null && a.Quantity >= 0);
-
-            //query = query.Where(a => a.ItemId <= 500 && a.Price >= price);
-            // -----
-            // Sqlite currently (since switching to 3.0.0) does Not work for '&& a.Price >= price' neither for '&& a.Price >= 0', because of 'decimal' type
-            // Method ToParametrizedSql with Sqlite throws Exception on line:
-            //   var enumerator = query.Provider.Execute<IEnumerable>(query.Expression).GetEnumerator();
-            // Message:
-            //   System.InvalidOperationException : The LINQ expression 'DbSet<Item>.Where(i => i.ItemId <= 500 && i.Price >= __price_0)' could not be translated.
         }
 
         query.BatchUpdate(new Item { Description = "Updated", Price = 1.5m }/*, updateColumns*/);
